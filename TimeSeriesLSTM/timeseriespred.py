@@ -10,6 +10,12 @@ close_prices = stock_prices['Close']
 
 train_data = np.array(close_prices[0:4000])
 
+from sklearn.preprocessing import MinMaxScaler
+#Range of data varies a lot, need to rescale
+
+MM = MinMaxScaler()
+train_data = MM.fit_transform(train_data.reshape(-1, 1))
+
 
 
 import torch 
@@ -117,7 +123,7 @@ model = Model(1,1,64,1)
 #Regression problem, MSELoss is a good choice
 criterion = nn.MSELoss()
 
-optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.01)
 
 batch_size = 64
 seq_length = 50
@@ -126,7 +132,7 @@ clip=5
 
 model = model.cuda()
 
-epochs = 5
+epochs = 250
 
 for e in range(0,epochs):
     
@@ -159,67 +165,122 @@ for e in range(0,epochs):
         running_loss += loss.item()
         
         
-import matplotlib.pyplot as plt
+    # print(running_loss/batch_size)
+        
+        
 
 
-# #Taking a look at what the training predictions look like
-# x,y = next(get_batches(train_data, batch_size, seq_length))
 
-# time = np.linspace(0,seq_length,seq_length)
-# single_train = x[0]
-# single_target = y[0]
+#Evaluating Model on Test Data
 
-
-# hidden = model.init_hidden(1)
-# hidden = tuple([each.data for each in hidden])
-
-# single_train = torch.Tensor(single_train).view(1,seq_length,1).cuda()
-
-# y_pred,output = model.forward(single_train,hidden)
-
-# #Detaching
-# y_pred = y_pred.cpu().detach().numpy()
-
-# plt.plot(time,y_pred)
-# plt.plot(time,single_target)
+#Turn off gradient tracking
+model.eval()
 
 
-#Trying the test data
-
-#This might be the problem
-hidden = model.init_hidden(1)
-
-
+#Getting test data
 test_data = np.array(close_prices[4000:5000])
+test_data = MM.transform(test_data.reshape(-1, 1))
 
-predictions = []
 
-for i in range(0,10):
-    test_series = test_data[i*seq_length:(1+i)*seq_length]
-    X_test = torch.Tensor(test_series).view(1, seq_length,1).cuda()
-    y_pred,hidden = model.forward(X_test,hidden)
+
+#Get first 50 in sequence to prime the LSTM
+prime = test_data[0:50]
+
+#Convert to tensor, reshape and pass to GPU
+prime = torch.Tensor(prime).view(1,len(prime),1).cuda()
+
+#Initialize null hidden state, with a batch size of 1
+hidden = model.init_hidden(1)
+hidden = tuple([each.data for each in hidden])
+
+
+
+
+
+y_pred,hidden = model.forward(prime,hidden)
+
+
+y_pred= y_pred.unsqueeze(0)
+# y_pred,hidden = model.forward(y_pred,hidden)
+
+
+
+# Detach from GPU and pass to numpy array
+pred_vals = y_pred.flatten()
+pred_vals = pred_vals.cpu().detach().numpy().tolist()
+
+
+import matplotlib.pyplot as plt
+prime = test_data[100:150]
+time = np.linspace(0,seq_length,seq_length)
+plt.plot(time,pred_vals, label = 'Predicted')
+plt.plot(time,prime, label = 'Ground Truth')
+plt.legend()
+
+
+# print(pred_vals)
+
+# predicted_values.append(pred_vals)
+
+
+# # print(len(predicted_values))
+
+
+
+#Array of predicted values
+predicted_values = []
+predicted_length = 50
+# for i in range(0,predicted_length):
+#     '''
+#     Take in seq of length 50 and predicted the next values.
+#     Take the final value and append it to our list
+#     '''
+#     y_pred,hidden = model.forward(y_pred,hidden)
+#     #Detach from GPU and pass to numpy array
+#     y_pred= y_pred.unsqueeze(0)
     
+#     pred_vals = y_pred.flatten()
+#     pred_vals = pred_vals.cpu().detach().numpy().tolist()
     
-    
-    y_pred = y_pred.cpu().detach().numpy().tolist()
-    
-    predictions.append(y_pred)
-
-
-predictions = np.array(predictions)
-
-predictions = predictions.reshape(500,1)
+#     predicted_values.append(pred_vals[-1])
 
 
 
-time = np.linspace(0,500,500)
-plt.plot(time,predictions)
-plt.plot(time,test_data[0:500])
+# import matplotlib.pyplot as plt
+# prime = test_data[0:50]
+# time = np.linspace(0,seq_length,seq_length)
+# plt.plot(time,predicted_values)
+# plt.plot(time,prime) 
 
 
-# test_data = torch.tensor(test_data)
 
-# test_data = test_data.view(batch_size,seq_length,1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
