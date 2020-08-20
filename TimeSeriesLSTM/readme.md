@@ -1,4 +1,4 @@
-#LSTM Time Series Prediction
+# LSTM Time Series Prediction
 
 Practing PyTorch by working through different RNN archcitectures for Seq2Seq prediction. Originally, I started with AAPL. However, this might not be the best stock to work with. The last few years of data (what our model is being tested on) are quite unlike the first 4000 or so training entries. Because of this, normalizing the data can be problematic. 
 
