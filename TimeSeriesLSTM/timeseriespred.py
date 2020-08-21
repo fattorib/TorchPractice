@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-stock_prices = pd.read_csv('AAPL.csv')
+stock_prices = pd.read_csv('NOK.csv')
 
 
 close_prices = stock_prices['Close']
@@ -132,7 +132,7 @@ clip=5
 
 model = model.cuda()
 
-epochs = 250
+epochs = 300
 
 for e in range(0,epochs):
     
@@ -168,9 +168,6 @@ for e in range(0,epochs):
     # print(running_loss/batch_size)
         
         
-
-
-
 #Evaluating Model on Test Data
 
 #Turn off gradient tracking
@@ -181,6 +178,8 @@ model.eval()
 test_data = np.array(close_prices[4000:5000])
 test_data = MM.transform(test_data.reshape(-1, 1))
 
+
+predicted_vals = []
 
 
 #Get first 50 in sequence to prime the LSTM
@@ -196,61 +195,44 @@ hidden = tuple([each.data for each in hidden])
 
 
 
-
+#Model forward pass
 y_pred,hidden = model.forward(prime,hidden)
-
-
 y_pred= y_pred.unsqueeze(0)
-# y_pred,hidden = model.forward(y_pred,hidden)
-
-
 
 # Detach from GPU and pass to numpy array
 pred_vals = y_pred.flatten()
+
+
 pred_vals = pred_vals.cpu().detach().numpy().tolist()
+
+predicted_vals.extend(pred_vals)
+
+
+
+
+for i in range(0,50):
+    #Model forward pass
+    y_pred,hidden = model.forward(y_pred,hidden)
+    y_pred = y_pred.unsqueeze(0)
+    
+    # Detach from GPU and pass to numpy array
+    pred_vals = y_pred.flatten()
+    pred_vals = pred_vals.cpu().detach().numpy().tolist()
+    predicted_vals.append(pred_vals[-1])
+
+
+
 
 
 import matplotlib.pyplot as plt
-prime = test_data[100:150]
-time = np.linspace(0,seq_length,seq_length)
-plt.plot(time,pred_vals, label = 'Predicted')
+
+prime = test_data[0:100]
+time = np.linspace(0,100,100)
+plt.plot(time,predicted_vals, label = 'Predicted')
 plt.plot(time,prime, label = 'Ground Truth')
 plt.legend()
 
 
-# print(pred_vals)
-
-# predicted_values.append(pred_vals)
-
-
-# # print(len(predicted_values))
-
-
-
-#Array of predicted values
-predicted_values = []
-predicted_length = 50
-# for i in range(0,predicted_length):
-#     '''
-#     Take in seq of length 50 and predicted the next values.
-#     Take the final value and append it to our list
-#     '''
-#     y_pred,hidden = model.forward(y_pred,hidden)
-#     #Detach from GPU and pass to numpy array
-#     y_pred= y_pred.unsqueeze(0)
-    
-#     pred_vals = y_pred.flatten()
-#     pred_vals = pred_vals.cpu().detach().numpy().tolist()
-    
-#     predicted_values.append(pred_vals[-1])
-
-
-
-# import matplotlib.pyplot as plt
-# prime = test_data[0:50]
-# time = np.linspace(0,seq_length,seq_length)
-# plt.plot(time,predicted_values)
-# plt.plot(time,prime) 
 
 
 
