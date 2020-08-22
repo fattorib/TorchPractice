@@ -107,6 +107,33 @@ for e in range(0,epochs):
         optim.step()
     
     
+    if e%2 == 0:
+        
+        
+        #Evaluate model on test data
+        accuracy = 0
+        #Turning off gradient tracking
+        model.eval()
+        with torch.no_grad():
+            for inputs, labels in testloader:
+                inputs, labels = inputs.cuda(), labels.cuda()
+                logps = model.forward(inputs)
+                
+                # Calculate accuracy
+                ps = torch.exp(logps)
+                top_p, top_class = ps.topk(1, dim=1)
+                equals = top_class == labels.view(*top_class.shape)
+                accuracy += torch.mean(equals.type(torch.FloatTensor)).item()
+                
+        print('Training Loss:', running_loss/len(testloader))
+        print('Test Accuracy:', 100*accuracy/len(testloader),'%')
+        
+        #Turning back on gradient tracking
+        model.train()
+        
+        
+    
+    
         
         
         
